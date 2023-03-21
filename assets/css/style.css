@@ -1,0 +1,177 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+    line-height: 1.6;
+}
+
+/* ---- quand une carte est afficher "displayed" ---- */
+.displayed {
+    pointer-events: none;
+    cursor: default;
+}
+
+:root {
+    --danger-color: #DC3545;
+}
+
+.error-msg {
+    color: white;
+    background-color: var(--danger-color);
+    padding: 5px 10px;
+    width: 100%;
+    font-size: .8em;
+}
+
+.left-lien {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.right-lien {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.custom-btn {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    -ms-border-radius: 5px;
+    -o-border-radius: 5px;
+    background-color: #333;
+    color: white;
+}
+
+.custom-btn:hover {
+    background-color: rgb(175, 88, 123);
+}
+
+li {list-style: none;} a {text-decoration: none;}
+
+.flex-r {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.container {
+    width: 1140px;
+    padding: 10px;
+    margin: auto;
+}
+
+.flex-c {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ------------------------ Start Header Style ------------------------ */
+header {
+    height: 70px;
+    width: 100%;
+    background-color: #333;
+}
+header .menu {
+    height: 100%;
+    width: 100%;
+}
+header .menu li a {
+    color: white;
+}
+
+/* ------------------------ End Header Style ------------------------ */
+
+.title {
+    text-align: center;
+    padding: 50px;
+}
+
+
+.content {
+    min-height: 100vh;
+}
+
+
+
+/* ------------------------ Start From Style ------------------------ */
+
+.content .form {
+    width: 400px;
+    height: 100%;
+    max-height: 430px;
+    background-color: rgb(105, 152, 152);
+    padding: 10px;
+    margin: auto ;
+}
+
+.content .form .inp {
+    padding: 10px;
+    margin: 10px 0;
+    width: 100%;
+    outline: none;
+    border: none;
+}
+
+.content .form .inp[type="submit"] {
+    cursor: pointer;
+}
+
+.content .form .inp[type="submit"]:hover {
+    background-color: aqua;
+}
+
+
+/* ------------------------ End From Style ------------------------ */
+
+
+
+/* ------------------------ Start classement Style ------------------------ */
+.classement {
+    
+}
+
+.classement .table {
+    background-color: rgba(0, 0, 0, 0.388);
+    border-spacing: 0;
+    text-align: center;
+    width: 100%;
+
+}
+
+.classement .table :is(td, th) {
+    border: 1px solid rgb(0, 0, 0);
+    color: white;
+    padding: 5px;
+}
+/* ------------------------ End classement Style ------------------------ */
+
+
+
+/* ------------------------ Start Card Style ------------------------ */
+.content .card {
+    width: 100px;
+}
+
+.content .card a {
+    display: block;
+}
+
+.content .card img {
+    width: 100%;
+}
+
+.content .even_number_game {/* -even_number_game = class_of_input- */
+    width: 160px;
+}
+
+/* ------------------------ Start Card Style ------------------------ */
+
