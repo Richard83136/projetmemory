@@ -1,0 +1,317 @@
+<?php
+    require_once("Bdd.php");
+    require_once("Model.php");
+    
+    class Players extends Bdd {
+        private $id;
+        protected $login;
+        protected $password;
+        protected $click;
+        protected $score;
+        protected $best_score;
+        protected $ranking;
+
+        private $current_player;
+        protected $tbname;
+        public $conn;
+
+        public function __construct() {
+            $this->conn = Parent::__construct();
+            $this->tbname = "players";
+            $this->best_score = 999;
+        }
+
+        /* ---------------- Others Methods ------------------ */
+        public function register($login, $password) {
+            $sql = "INSERT INTO ".$this->get_table_name()."(login, password, best_score, ranking) VALUES(?, ?, ?, ?)";
+
+            $this->ranking = $this->initialize_rank();
+
+            $req = $this->conn->prepare($sql);
+            $req->bindParam(1, $login);
+            $req->bindParam(2, $password);
+            $req->bindParam(3, $this->best_score);
+            $req->bindParam(4, $this->ranking);
+            $req->execute();
+            
+            if($req->rowCount()) {
+                return true;
+            }
+            return false;
+        }
+
+        public function connect($login, $password) {
+            $sql = "SELECT * FROM ".$this->get_table_name()." WHERE login = ? && password = ?";
+            $req = $this->conn->prepare($sql);
+            $req->bindParam(1, $login);
+            $req->bindParam(2, $password);
+            $req->execute();
+
+            if($req->rowCount()) {
+                $player_obj = $req->fetchObject();
+
+                //remplir les attributs du joueur
+                $this->update_local_data($player_obj);
+
+                //session player pour l'utiliser pour la connexion sur les autres pages du site et pour autres utilisations
+                $_SESSION["player"] = $player_obj;
+
+                $this->current_player = $this;
+                return true;
+            } 
+            return false;
+        }
+        
+        public function is_exist($login) {
+            $sql = "SELECT * FROM ".$this->get_table_name()." WHERE login = ?";
+            $req = $this->conn->prepare($sql);
+            $req->bindParam(1, $login);
+            $req->execute();
+
+            if($req->rowCount()) {
+                return true;
+            }
+            return false;
+        }
+
+        public function is_connected() {
+            if($this->id) {
+                return true;
+            }
+            return false;
+        }
+
+        public function update_local_data($data) {
+            foreach($data as $key => $value) {
+                $this->$key = $value;
+            }
+        }
+
+        public function disconnect() {
+            $this->delete_properties();
+            session_unset();
+            session_destroy();
+
+            header("location: ../index.php");
+            exit();
+        }
+
+        public function delete() {
+            $sql = "DELETE FROM ".$this->get_table_name()." WHERE id = '$this->id'";
+            $req = $this->conn->query($sql);
+
+            $this->disconnect();//pour les déconnexion
+            return $req;
+        }
+
+        protected function delete_properties() {
+            foreach(array_keys((array)$this->get_properties()) as $key) {
+                $this->$key = null;
+            }
+        }
+
+        public function redirect_if_is_connected() {
+            if($this->is_connected()) {
+                header("location: index.php");
+                exit();
+            }
+        }
+        
+        protected function initialize_rank() {
+            $sql = "SELECT MAX(ranking) as ranking FROM ".$this->get_table_name();
+            $req = $this->conn->prepare($sql);
+            $req->execute();
+
+            return $req->fetchObject()->ranking + 1; // 1 plus le dernier rank
+        }
+
+        public function calcul_score_game($even_number) {
+            $score_game = $this->get_number_of_click() / $even_number; //rule
+            $this->set_score($score_game);
+        }
+
+        //Pour la reconnexion 
+        public function re_login() {
+            $login = $_SESSION["player"]->login;
+            $password = $_SESSION["player"]->password;
+            //reconnexion avec les donnees stockées dans la session player quand elle est créée dans la methode player->connect() qu'on a appelé la 1er fois sur la page connexion.php 
+            $this->connect($login, $password);
+        }
+
+        protected function process_rank($id, $new_rank) {
+            $sql = "UPDATE ".$this->get_table_name()." SET ranking = ? WHERE id = ?";
+            $req = $this->conn->prepare($sql);
+            $req->bindParam(1, $new_rank);
+            $req->bindParam(2, $id);
+            $req->execute();
+        }
+
+        public function display_best_ten_player() { ?>
+            <section class="classement">
+                <h1 class="title">classement</h1>
+                <article class="list-players">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Classement</th>
+                                <th>Joueur</th>
+                                <th>Meilleur Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php for($i = 1 ; isset($this->get_best_ten_player()[$i]); $i++) :?>
+                                <?php // *** Partager les classements
+                                    $this->process_rank($this->get_best_ten_player()[$i]->id, $i)
+                                    ?>
+                                <tr>
+                                    <td><?=
+                                            $this->get_best_ten_player()[$i]->ranking
+                                        ?></td>
+                                        <td><?=
+                                            $this->get_best_ten_player()[$i]->login
+                                        ?></td>
+                                        <td><?=
+                                            $this->get_best_ten_player()[$i]->best_score
+                                        ?>s</td>
+                                </tr>
+                                <?php endfor ;?>
+                        </tbody>
+                    </table>
+                </article>
+            </section>
+        <?php }
+
+        public function update_ranking_list() {
+            //mise a jour du classement des joueur quand quelqu'un atteint un nouveau best_score
+            $player = $this->get_all_players();
+            for($i = 1 ; isset($player[$i]); $i++) {
+                $this->process_rank($player[$i]->id, $i);
+            }
+
+            //set new_rank
+            $this->set_rank($this->get_rank_by_id()->ranking);
+        }
+
+
+        /* ---------------- Getters Methods ------------------- */
+        public function get_properties() {
+            $list = [
+                "id" => $this->get_id(),
+                "login" => $this->get_login(),
+                "password" => $this->get_password(),
+                "best_score" => $this->get_best_score(),
+                "ranking" => $this->get_ranking(),
+                "score" => $this->get_score(),
+                "click" => $this->get_number_of_click(),
+            ];
+            
+            return $list;
+        }
+
+        public function get_id() :string {
+            return $this->id;
+        }
+
+        public function get_login() :string {
+            return $this->login;
+        }
+
+        public function get_password() :string {
+            return $this->password;
+        }
+
+        public function get_score() {
+            $this->score = $_SESSION["score"];
+            return $this->score;
+        }
+
+        public function get_best_score() {
+            return $this->best_score;
+        }
+
+        public function get_ranking() {
+            return $this->ranking;
+        }
+
+        public function get_number_of_click() {
+            $this->click = $_SESSION["click"];
+            return $this->click;
+        }
+
+        public function get_current_player() {
+            return $this->current_player;
+        }
+
+        protected function get_table_name() {
+            return $this->tbname;
+        }
+
+        public function get_rank_by_id() {
+            $sql = "SELECT * FROM ".$this->get_table_name()." 
+            WHERE id = $this->id";  
+            $req = $this->conn->prepare($sql);
+            $req->execute();
+
+            return $req->fetchObject();
+        }
+
+        protected function get_all_players() {
+            $sql = "SELECT * FROM ".$this->get_table_name()." ORDER BY best_score ASC";
+            $req = $this->conn->prepare($sql);
+            $req->execute();
+            
+            $res = $req->fetchAll(PDO::FETCH_OBJ);
+            //ajoute une value au premier index pour commencer à partager les  classements par l'index 1 ( premier classement si 1)
+            array_unshift($res, "");
+
+            return $res;
+        }
+
+        public function get_best_ten_player() :array {
+            $sql = "SELECT id, login, ranking, best_score FROM ".$this->get_table_name()." 
+            ORDER BY best_score ASC LIMIT 10 OFFSET 0";  
+            $req = $this->conn->prepare($sql);
+            $req->execute();
+
+            $res = $req->fetchAll(PDO::FETCH_OBJ);
+            //ajoute une value au premier index pour commencer à partager les classements par l'index 1 (car le premier classement si 1)
+            array_unshift($res, "");
+
+            return $res;
+        }
+
+
+        /* ---------------- Setters Methods ------------------- */
+        protected function set_score($score_game) {
+            $_SESSION["score"] = $score_game;
+
+            if($this->get_score() < $this->get_best_score()) {
+                $this->set_best_score();
+            }
+            //supprime ou vide la valeur de session score apres la fin de la partie (quand on efface la fenêtre sortie a la finn de la partie) =créée un function new_game qui est mise à l'intérieur de session['score] = null, session['click] = 0 ... 
+        }
+
+        protected function set_best_score() {
+            $new_best_score = $_SESSION["player"]->best_score = $this->best_score = $this->get_score();
+            $sql = "UPDATE ".$this->get_table_name()." SET best_score = ? WHERE id = ?";
+            $req = $this->conn->prepare($sql);
+            $req->bindParam(1, $new_best_score);
+            $req->bindParam(2, $this->id);
+            $req->execute();
+
+            //mettre a jour les classements des joueurs
+            $this->update_ranking_list();
+        }
+
+        public function set_click() {
+            $_SESSION["click"]++;
+        }
+
+        protected function set_rank($new_rank) {
+            $this->ranking = $new_rank;
+            $_SESSION["player"]->ranking = $new_rank;
+        }
+    }
+
+    //$player = Players::get_instance(); //Singleton pattern
+    $player = new Players;
