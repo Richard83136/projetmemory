@@ -17,7 +17,7 @@
         <main class="main">
             <a class="left-lien custom-btn" href="index.php">Accueil</a>
             <section class="content flex-r">
-                <form action="config/conf_inscription" method="post" class="form">
+                <form action="config/conf_inscription.php" method="post" class="form">
                     <input type="text" name="login" id="login" class="inp" placeholder="Login" minlength="3" required>
                     <?php echo Model::print_err("loginErr"); ?>
                     
